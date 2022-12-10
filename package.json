@@ -1,0 +1,60 @@
+{
+    "name": "@nuxt-alt/http",
+    "version": "1.5.5",
+    "description": "An extended module to ohmyfetch",
+    "homepage": "https://github.com/nuxt-alt/http",
+    "author": "Teranode",
+    "keywords": [
+        "nuxt",
+        "nuxtjs",
+        "nuxt-module",
+        "nuxt-plugin",
+        "nuxt-module-alternatives",
+        "ohmyfetch",
+        "@nuxtjs/http"
+    ],
+    "license": "MIT",
+    "type": "module",
+    "sideEffects": false,
+    "exports": {
+        ".": {
+            "import": "./dist/module.mjs",
+            "require": "./dist/module.cjs"
+        }
+    },
+    "main": "./dist/module.cjs",
+    "module": "./dist/module.mjs",
+    "types": "./dist/types.d.ts",
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "dev": "nuxi dev playground",
+        "dev:build": "nuxi build playground",
+        "dev:prepare": "unbuild --stub && nuxi prepare playground",
+        "prepack": "unbuild"
+    },
+    "dependencies": {
+        "@nuxt/kit": "^3.0.0",
+        "@refactorjs/ofetch": "latest",
+        "defu": "latest",
+        "ufo": "latest"
+    },
+    "devDependencies": {
+        "@nuxt-alt/proxy": "latest",
+        "nuxt": "^3.0.0",
+        "unbuild": "latest"
+    },
+    "repository": {
+        "type": "git",
+        "url": "it+https://github.com/nuxt-alt/http.git",
+        "directory": "@nuxt-alt/http"
+    },
+    "bugs": {
+        "url": "https://github.com/nuxt-alt/http/issues"
+    },
+    "publishConfig": {
+        "access": "public"
+    },
+    "packageManager": "yarn@3.3.0"
+}
