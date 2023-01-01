@@ -105,17 +105,19 @@ export default defineNuxtModule({
             { from: composables, name: 'useLazyHttp' }
         ])
 
-        // create nitro plugin
-        addTemplate({
-            getContents: () => nitroHttp(),
-            filename: `nitro-http.mjs`,
-            write: true
-        })
+        if (process.platform !== "win32") {
+            // create nitro plugin
+            addTemplate({
+                getContents: () => nitroHttp(),
+                filename: `nitro-http.mjs`,
+                write: true
+            })
 
-        nuxt.hook('nitro:config', (nitro) => {
-            nitro.plugins = nitro.plugins || []
-            nitro.plugins.push(resolver.resolve(nuxt.options.buildDir, `nitro-http.mjs`))
-        })
+            nuxt.hook('nitro:config', (nitro) => {
+                nitro.plugins = nitro.plugins || []
+                nitro.plugins.push(resolver.resolve(nuxt.options.buildDir, `nitro-http.mjs`))
+            })
+        }
     }
 })
 

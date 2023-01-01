@@ -1,18 +1,22 @@
 import type { FetchConfig } from '@refactorjs/ofetch'
 import type { TypedInternalResponse, NitroFetchRequest } from 'nitropack'
-//@ts-ignore
-import type { AsyncDataOptions, _Transform, KeyOfRes, AsyncData, PickFrom } from '#app'
+import type { AsyncDataOptions, AsyncData } from '#app'
 import { computed, unref, Ref, reactive } from 'vue'
 import { useAsyncData, useNuxtApp } from '#imports'
 import { hash } from 'ohash'
 
-export type FetchResult<ReqT extends NitroFetchRequest> = TypedInternalResponse<ReqT, unknown>
+type _Transform<Input = any, Output = any> = (input: Input) => Output
+type PickFrom<T, K extends Array<string>> = T extends Array<any> ? T : T extends Record<string, any> ? keyof T extends K[number] ? T : Pick<T, K[number]> : T
+type KeysOf<T> = Array<T extends T ? keyof T extends string ? keyof T : string : never>
+type KeyOfRes<Transform extends _Transform> = KeysOf<ReturnType<Transform>>
 
 type ComputedOptions<T extends Record<string, any>> = {
     [K in keyof T]: T[K] extends Function ? T[K] : T[K] extends Record<string, any> ? ComputedOptions<T[K]> | Ref<T[K]> | T[K] : Ref<T[K]> | T[K]
 }
 
 type ComputedFetchOptions = ComputedOptions<FetchConfig>
+
+export type FetchResult<ReqT extends NitroFetchRequest> = TypedInternalResponse<ReqT, unknown>
 
 export interface UseHttpOptions<
     DataT,
