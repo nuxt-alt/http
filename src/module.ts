@@ -18,7 +18,7 @@ export default defineNuxtModule({
     defaults: {} as ModuleOptions,
     setup(opts, nuxt) {
         // Combine options with runtime config
-        const moduleOptions: ModuleOptions = defu(nuxt.options.runtimeConfig?.public?.http, opts)
+        const moduleOptions: ModuleOptions = opts
 
         // Default host
         const defaultHost = moduleOptions.host || process.env.NITRO_HOST || process.env.HOST || 'localhost'

@@ -1,5 +1,6 @@
 import { createInstance } from '@refactorjs/ofetch'
 import { defineNuxtPlugin } from '#imports'
+import { defu } from "defu";
 
 // Nuxt Options
 const options = JSON.parse('<%= JSON.stringify(options) %>')
@@ -39,23 +40,28 @@ const debugInterceptor = http => {
 '<% } %>'
 
 export default defineNuxtPlugin(ctx => {
+    const runtimeConfig = useRuntimeConfig()
+
+    // Use runtime config to configure options, with module options as the fallback
+    const config = defu({}, runtimeConfig.http, runtimeConfig.public.http, options)
+
     // baseURL
-    const baseURL = process.client ? options.browserBaseURL : options.baseURL
+    const baseURL = process.client ? config.browserBaseURL : config.baseURL
 
     // Defaults
     const defaults = {
         baseURL,
-        retry: options.retry,
-        timeout: process.server ? options.serverTimeout : options.clientTimeout,
-        credentials: options.credentials,
-        headers: options.headers,
+        retry: config.retry,
+        timeout: process.server ? config.serverTimeout : config.clientTimeout,
+        credentials: config.credentials,
+        headers: config.headers,
     }
 
-    if (options.proxyHeaders) {
+    if (config.proxyHeaders) {
         // Proxy SSR request headers
         if (process.server && ctx.ssrContext?.event?.req?.headers) {
             const reqHeaders = { ...ctx.ssrContext.event.req.headers }
-            for (const h of options.proxyHeadersIgnore) {
+            for (const h of config.proxyHeadersIgnore) {
                 delete reqHeaders[h]
             }
 

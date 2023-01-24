@@ -44,7 +44,7 @@ declare module '@nuxt/schema' {
         http?: ModuleOptions
     }
     interface RuntimeConfig {
-        http?: ModuleOptions;
+        http?: Omit<ModuleOptions, 'browserBaseURL'>
     }
     interface PublicRuntimeConfig {
         http?: ModuleOptions
