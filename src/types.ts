@@ -13,7 +13,7 @@ export interface ModuleOptions extends Omit<FetchConfig, 'credentials'> {
     port?: string | number;
     https?: boolean;
     retry?: number;
-    credentials?: string;
+    credentials?: 'same-origin' | 'omit' | 'include';
     headers?: any;
     debug?: boolean;
     interceptorPlugin?: boolean;
