@@ -1,6 +1,6 @@
 {
     "name": "@nuxt-alt/http",
-    "version": "1.6.1",
+    "version": "1.6.4",
     "description": "An extended module to ohmyfetch",
     "homepage": "https://github.com/nuxt-alt/http",
     "author": "Teranode",
@@ -35,15 +35,15 @@
         "prepack": "unbuild"
     },
     "dependencies": {
-        "@nuxt/kit": "^3.2.0",
+        "@nuxt/kit": "^3.3.2",
         "@refactorjs/ofetch": "latest",
         "defu": "latest",
         "ufo": "latest"
     },
     "devDependencies": {
         "@nuxt-alt/proxy": "latest",
-        "@types/node": "^18.13.0",
-        "nuxt": "^3.2.0",
+        "@types/node": "^18",
+        "nuxt": "^3.3.2",
         "unbuild": "latest"
     },
     "repository": {

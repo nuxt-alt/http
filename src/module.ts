@@ -1,5 +1,5 @@
 import type { ModuleOptions } from './types'
-import { addTemplate, defineNuxtModule, addPluginTemplate, createResolver, addImports } from '@nuxt/kit'
+import { addTemplate, addServerPlugin, defineNuxtModule, addPluginTemplate, createResolver, addImports } from '@nuxt/kit'
 import { name, version } from '../package.json'
 import { withHttps } from 'ufo'
 import { defu } from 'defu'
@@ -90,10 +90,7 @@ export default defineNuxtModule({
                 write: true
             })
 
-            nuxt.hook('nitro:config', (nitro) => {
-                nitro.plugins = nitro.plugins || []
-                nitro.plugins.push(resolver.resolve(nuxt.options.buildDir, `nitro-http.mjs`))
-            })
+            addServerPlugin(resolver.resolve(nuxt.options.buildDir, 'nitro-http.mjs'))
         }
 
         // Register plugin
@@ -121,7 +118,8 @@ export default defineNuxtModule({
 
 function nitroHttp(options: ModuleOptions) {
 return `import { createInstance } from '@refactorjs/ofetch'
-import { createFetch, Headers } from "ofetch";
+import { createFetch, Headers } from 'ofetch';
+import { eventHandler, fetchWithEvent } from 'h3';
 
 const config = ${JSON.stringify(options)}
 
@@ -140,6 +138,11 @@ export default function (nitroApp) {
 
     // @ts-ignore
     globalThis.$http = createInstance(defaults, createFetch({ fetch: nitroApp.localFetch, Headers }))
+
+    nitroApp.h3App.use(eventHandler((event) => {
+        // Assign bound http to context
+        event.$http = (req, init) => fetchWithEvent(event, req, init, { fetch: $http });
+    }))
 }
 `
 }

@@ -28,8 +28,15 @@ declare global {
     }
 }
 
+declare module "h3" {
+    interface H3Event {
+        /** @experimental Calls fetch with same context and request headers */
+        $http: typeof $http;
+    }
+}
+
 declare module '#app' {
-    interface NuxtApp extends HttpPluginInjection {}
+    interface NuxtApp extends HttpPluginInjection { }
 }
 
 interface HttpPluginInjection {
