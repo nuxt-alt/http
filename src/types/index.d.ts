@@ -43,21 +43,6 @@ interface HttpPluginInjection {
     $http: FetchInstance;
 }
 
-declare module '@nuxt/schema' {
-    interface NuxtConfig {
-        http?: ModuleOptions
-    }
-    interface NuxtOptions {
-        http?: ModuleOptions
-    }
-    interface RuntimeConfig {
-        http?: Omit<ModuleOptions, 'browserBaseURL'>
-    }
-    interface PublicRuntimeConfig {
-        http?: ModuleOptions
-    }
-}
-
 declare const NuxtHttp: NuxtSchema.NuxtModule<ModuleOptions>
 
 export default NuxtHttp

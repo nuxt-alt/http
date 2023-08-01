@@ -43,7 +43,7 @@ export default defineNuxtPlugin(ctx => {
     const runtimeConfig = useRuntimeConfig()
 
     // Use runtime config to configure options, with module options as the fallback
-    const config = defu({}, runtimeConfig.http, runtimeConfig.public.http, options)
+    const config = process.server ? defu({}, runtimeConfig.http, runtimeConfig.public.http, options) : defu({}, runtimeConfig.public.http, options)
 
     // baseURL
     const baseURL = process.client ? config.browserBaseURL : config.baseURL
@@ -59,7 +59,7 @@ export default defineNuxtPlugin(ctx => {
 
     if (config.proxyHeaders) {
         // Proxy SSR request headers
-        if (process.server && ctx.ssrContext?.event?.node.req?.headers) {
+        if (process.server && ctx.ssrContext?.event?.node?.req?.headers) {
             const reqHeaders = { ...ctx.ssrContext.event.node.req.headers }
             for (const h of config.proxyHeadersIgnore) {
                 delete reqHeaders[h]
