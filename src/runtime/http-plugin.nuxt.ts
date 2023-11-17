@@ -1,43 +1,38 @@
-import { createInstance } from '@refactorjs/ofetch'
-import { defineNuxtPlugin, useRuntimeConfig } from '#imports'
+import { createInstance } from '@refactorjs/ofetch';
+import { defineNuxtPlugin, useRuntimeConfig } from '#imports';
+import { options } from '#nuxt-http-options';
 import { defu } from "defu";
 
-// Nuxt Options
-const options = JSON.parse('<%= JSON.stringify(options) %>')
-
-const httpInstance = (options) => {
+const httpInstance = (opts) => {
     // Create new Fetch instance
-    const instance = createInstance(options)
-    '<% if (options.debug) { %>';debugInterceptor(instance);'<% } %>'
+    const instance = createInstance(opts)
+
+    if (options.debug) {
+        const log = (level, ...messages) => console[level]('[http]', ...messages)
+
+        // request
+        instance.onRequest(config => {
+            log('info', 'Request:', config)
+            return config
+        })
+
+        instance.onRequestError(error => {
+            log('error', 'Request error:', error)
+        })
+
+        // response
+        instance.onResponse(res => {
+            log('info', 'Response:', res)
+            return res
+        })
+
+        instance.onResponseError(error => {
+            log('error', 'Response error:', error)
+        })
+    }
 
     return instance
 }
-
-'<% if (options.debug) { %>'
-const debugInterceptor = http => {
-    const log = (level, ...messages) => console[level]('[http]', ...messages)
-
-    // request
-    http.onRequest(config => {
-        log('info', 'Request:', config)
-        return config
-    })
-
-    http.onRequestError(error => {
-        log('error', 'Request error:', error)
-    })
-
-    // response
-    http.onResponse(res => {
-        log('info', 'Response:', res)
-        return res
-    })
-
-    http.onResponseError(error => {
-        log('error', 'Response error:', error)
-    })
-}
-'<% } %>'
 
 export default defineNuxtPlugin(ctx => {
     const runtimeConfig = useRuntimeConfig()

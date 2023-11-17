@@ -16,7 +16,6 @@ export interface ModuleOptions extends Omit<FetchConfig, 'credentials'> {
     credentials?: 'same-origin' | 'omit' | 'include';
     headers?: any;
     debug?: boolean;
-    interceptorPlugin?: boolean;
 }
 
 declare global {
@@ -28,6 +27,15 @@ declare global {
     }
 }
 
+declare module '@nuxt/schema' {
+    interface NuxtConfig {
+        ['http']?: Partial<ModuleOptions>
+    }
+    interface NuxtOptions {
+        ['http']?: ModuleOptions
+    }
+}
+
 declare module "h3" {
     interface H3Event {
         /** @experimental Calls fetch with same context and request headers */
@@ -36,7 +44,7 @@ declare module "h3" {
 }
 
 declare module '#app' {
-    interface NuxtApp extends HttpPluginInjection { }
+    interface NuxtApp extends HttpPluginInjection {}
 }
 
 interface HttpPluginInjection {

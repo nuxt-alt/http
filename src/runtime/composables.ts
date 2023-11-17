@@ -1,17 +1,18 @@
 import type { FetchConfig } from '@refactorjs/ofetch'
 import type { FetchError } from 'ofetch'
-import type { TypedInternalResponse, NitroFetchRequest, AvailableRouterMethod } from 'nitropack'
+import type { TypedInternalResponse, NitroFetchRequest, AvailableRouterMethod as _AvailableRouterMethod } from 'nitropack'
 import type { AsyncDataOptions, AsyncData } from '#app'
-import { computed, unref, Ref, reactive } from 'vue'
+import { computed, unref, reactive, type MaybeRef, type WatchSource, type Ref } from 'vue'
 import { useAsyncData, useNuxtApp } from '#imports'
 import { hash } from 'ohash'
 
-export type _Transform<Input = any, Output = any> = (input: Input) => Output
-export type PickFrom<T, K extends Array<string>> = T extends Array<any> ? T : T extends Record<string, any> ? keyof T extends K[number] ? T : Pick<T, K[number]> : T
-export type KeysOf<T> = Array<T extends T ? keyof T extends string ? keyof T : string : never>
-export type KeyOfRes<Transform extends _Transform> = KeysOf<ReturnType<Transform>>
+type PickFrom<T, K extends Array<string>> = T extends Array<any> ? T : T extends Record<string, any> ? keyof T extends K[number] ? T : K[number] extends never ? T : Pick<T, K[number]> : T;
+type KeysOf<T> = Array<T extends T ? keyof T extends string ? keyof T : never : never>;
 
-export interface NitroFetchOptions<R extends NitroFetchRequest, M extends AvailableRouterMethod<R> = AvailableRouterMethod<R>> extends Omit<FetchConfig, 'method'> {
+type AvailableRouterMethod<R extends NitroFetchRequest> = _AvailableRouterMethod<R> | Uppercase<_AvailableRouterMethod<R>>
+type MultiWatchSources = (WatchSource<unknown> | object)[];
+
+interface NitroFetchOptions<R extends NitroFetchRequest, M extends AvailableRouterMethod<R> = AvailableRouterMethod<R>> extends Omit<FetchConfig, 'method'> {
     method?: Uppercase<M> | M;
 }
 
@@ -19,47 +20,74 @@ type ComputedOptions<T extends Record<string, any>> = {
     [K in keyof T]: T[K] extends Function ? T[K] : T[K] extends Record<string, any> ? ComputedOptions<T[K]> | Ref<T[K]> | T[K] : Ref<T[K]> | T[K]
 }
 
-export type ComputedFetchOptions<R extends NitroFetchRequest, M extends AvailableRouterMethod<R>> = ComputedOptions<NitroFetchOptions<R, M>>
+export type FetchResult<ReqT extends NitroFetchRequest, M extends AvailableRouterMethod<ReqT>> = TypedInternalResponse<ReqT, unknown, Lowercase<M>>
 
-export type FetchResult<ReqT extends NitroFetchRequest, M extends AvailableRouterMethod<ReqT>> = TypedInternalResponse<ReqT, unknown, M>
+type ComputedFetchOptions<R extends NitroFetchRequest, M extends AvailableRouterMethod<R>> = ComputedOptions<NitroFetchOptions<R, M>>
 
 export interface UseHttpOptions<
-    DataT,
-    Transform extends _Transform<DataT, any> = _Transform<DataT, DataT>,
-    PickKeys extends KeyOfRes<Transform> = KeyOfRes<Transform>,
+    ResT,
+    DataT = ResT,
+    PickKeys extends KeysOf<DataT> = KeysOf<DataT>,
+    DefaultT = null,
     R extends NitroFetchRequest = string & {},
     M extends AvailableRouterMethod<R> = AvailableRouterMethod<R>
-> extends AsyncDataOptions<DataT, Transform, PickKeys>, ComputedFetchOptions<R, M> {
+> extends Omit<AsyncDataOptions<ResT, DataT, PickKeys, DefaultT>, 'watch'>, ComputedFetchOptions<R, M> {
     key?: string
+    $fetch?: typeof globalThis.$http
+    watch?: MultiWatchSources | false
 }
 
 export function useHttp<
     ResT = void,
     ErrorT = FetchError,
     ReqT extends NitroFetchRequest = NitroFetchRequest,
-    Method extends AvailableRouterMethod<ReqT> = 'get' extends AvailableRouterMethod<ReqT> ? 'get' : AvailableRouterMethod<ReqT>,
+    Method extends AvailableRouterMethod<ReqT> = ResT extends void ? 'get' extends AvailableRouterMethod<ReqT> ? 'get' : AvailableRouterMethod<ReqT> : AvailableRouterMethod<ReqT>,
     _ResT = ResT extends void ? FetchResult<ReqT, Method> : ResT,
-    Transform extends (res: _ResT) => any = (res: _ResT) => _ResT,
-    PickKeys extends KeyOfRes<Transform> = KeyOfRes<Transform>
+    DataT = _ResT,
+    PickKeys extends KeysOf<DataT> = KeysOf<DataT>,
+    DefaultT = null,
 >(
     request: Ref<ReqT> | ReqT | (() => ReqT),
-    opts?: UseHttpOptions<_ResT, Transform, PickKeys, ReqT, Method>
-): AsyncData<PickFrom<ReturnType<Transform>, PickKeys>, ErrorT | null | true>
+    opts?: UseHttpOptions<_ResT, DataT, PickKeys, DefaultT, ReqT, Method>
+): AsyncData<PickFrom<DataT, PickKeys> | DefaultT, ErrorT | null>
 export function useHttp<
     ResT = void,
     ErrorT = FetchError,
     ReqT extends NitroFetchRequest = NitroFetchRequest,
-    Method extends AvailableRouterMethod<ReqT> = 'get' extends AvailableRouterMethod<ReqT> ? 'get' : AvailableRouterMethod<ReqT>,
+    Method extends AvailableRouterMethod<ReqT> = ResT extends void ? 'get' extends AvailableRouterMethod<ReqT> ? 'get' : AvailableRouterMethod<ReqT> : AvailableRouterMethod<ReqT>,
     _ResT = ResT extends void ? FetchResult<ReqT, Method> : ResT,
-    Transform extends (res: _ResT) => any = (res: _ResT) => _ResT,
-    PickKeys extends KeyOfRes<Transform> = KeyOfRes<Transform>
+    DataT = _ResT,
+    PickKeys extends KeysOf<DataT> = KeysOf<DataT>,
+    DefaultT = DataT,
+> (
+    request: Ref<ReqT> | ReqT | (() => ReqT),
+    opts?: UseHttpOptions<_ResT, DataT, PickKeys, DefaultT, ReqT, Method>
+): AsyncData<PickFrom<DataT, PickKeys> | DefaultT, ErrorT | null>
+export function useHttp<
+    ResT = void,
+    ErrorT = FetchError,
+    ReqT extends NitroFetchRequest = NitroFetchRequest,
+    Method extends AvailableRouterMethod<ReqT> = ResT extends void ? 'get' extends AvailableRouterMethod<ReqT> ? 'get' : AvailableRouterMethod<ReqT> : AvailableRouterMethod<ReqT>,
+    _ResT = ResT extends void ? FetchResult<ReqT, Method> : ResT,
+    DataT = _ResT,
+    PickKeys extends KeysOf<DataT> = KeysOf<DataT>,
+    DefaultT = null,
 >(
     request: Ref<ReqT> | ReqT | (() => ReqT),
-    arg1?: string | UseHttpOptions<_ResT, Transform, PickKeys, ReqT, Method>,
+    arg1?: string | UseHttpOptions<_ResT, DataT, PickKeys, DefaultT, ReqT, Method>,
     arg2?: string
 ) {
     const [opts = {}, autoKey] = typeof arg1 === 'string' ? [{}, arg1] : [arg1, arg2]
-    const _key = opts.key || hash([autoKey, unref(opts.baseURL), typeof request === 'string' ? request : '', unref(opts.params || opts.query)])
+
+    const _request = computed(() => {
+        let r = request
+        if (typeof r === 'function') {
+          r = r()
+        }
+        return unref(r)
+    })
+
+    const _key = opts.key || hash([autoKey, unref(opts.method as MaybeRef<string | undefined> | undefined)?.toUpperCase() || 'GET', unref(opts.baseURL), typeof _request.value === 'string' ? _request.value : '', unref(opts.params || opts.query)])
 
     if (!_key || typeof _key !== 'string') {
         throw new TypeError('[nuxt] [useFetch] key must be a string: ' + _key)
@@ -71,13 +99,9 @@ export function useHttp<
 
     const key = _key === autoKey ? '$h' + _key : _key
 
-    const _request = computed(() => {
-        let r = request
-        if (typeof r === 'function') {
-          r = r()
-        }
-        return unref(r)
-    })
+    if (!opts.baseURL && typeof _request.value === 'string' && _request.value.startsWith('//')) {
+        throw new Error('[nuxt] [useFetch] the request URL must not start with "//".')
+    }
 
     const {
         server,
@@ -95,23 +119,19 @@ export function useHttp<
         cache: typeof opts.cache === 'boolean' ? undefined : opts.cache
     })
 
-    const _asyncDataOptions: AsyncDataOptions<_ResT, Transform, PickKeys> = {
+    const _asyncDataOptions: AsyncDataOptions<_ResT, DataT, PickKeys, DefaultT> = {
         server,
         lazy,
         default: defaultFn,
         transform,
         pick,
         immediate,
-        watch: [
-            _fetchOptions,
-            _request,
-            ...(watch || [])
-        ]
+        watch: watch === false ? [] : [_fetchOptions, _request, ...(watch || [])]
     }
 
     const { $http } = useNuxtApp()
 
-    const asyncData = useAsyncData<_ResT, ErrorT, Transform, PickKeys>(key, () => {
+    const asyncData = useAsyncData<_ResT, ErrorT, DataT, PickKeys, DefaultT>(key, () => {
         return $http.request(_request.value, _fetchOptions as FetchConfig) as Promise<_ResT>
     }, _asyncDataOptions)
 
@@ -122,33 +142,48 @@ export function useLazyHttp<
     ResT = void,
     ErrorT = FetchError,
     ReqT extends NitroFetchRequest = NitroFetchRequest,
-    Method extends AvailableRouterMethod<ReqT> = 'get' extends AvailableRouterMethod<ReqT> ? 'get' : AvailableRouterMethod<ReqT>,
+    Method extends AvailableRouterMethod<ReqT> = ResT extends void ? 'get' extends AvailableRouterMethod<ReqT> ? 'get' : AvailableRouterMethod<ReqT> : AvailableRouterMethod<ReqT>,
     _ResT = ResT extends void ? FetchResult<ReqT, Method> : ResT,
-    Transform extends (res: _ResT) => any = (res: _ResT) => _ResT,
-    PickKeys extends KeyOfRes<Transform> = KeyOfRes<Transform>
->(
+    DataT = _ResT,
+    PickKeys extends KeysOf<DataT> = KeysOf<DataT>,
+    DefaultT = null,
+> (
     request: Ref<ReqT> | ReqT | (() => ReqT),
-    opts?: Omit<UseHttpOptions<_ResT, Transform, PickKeys, Method>, 'lazy'>
-): AsyncData<PickFrom<ReturnType<Transform>, PickKeys>, ErrorT | null | true>
+    opts?: Omit<UseHttpOptions<_ResT, DataT, PickKeys, DefaultT, ReqT, Method>, 'lazy'>
+  ): AsyncData<PickFrom<DataT, PickKeys> | DefaultT, ErrorT | null>
 export function useLazyHttp<
     ResT = void,
     ErrorT = FetchError,
     ReqT extends NitroFetchRequest = NitroFetchRequest,
-    Method extends AvailableRouterMethod<ReqT> = 'get' extends AvailableRouterMethod<ReqT> ? 'get' : AvailableRouterMethod<ReqT>,
+    Method extends AvailableRouterMethod<ReqT> = ResT extends void ? 'get' extends AvailableRouterMethod<ReqT> ? 'get' : AvailableRouterMethod<ReqT> : AvailableRouterMethod<ReqT>,
     _ResT = ResT extends void ? FetchResult<ReqT, Method> : ResT,
-    Transform extends (res: _ResT) => any = (res: _ResT) => _ResT,
-    PickKeys extends KeyOfRes<Transform> = KeyOfRes<Transform>
+    DataT = _ResT,
+    PickKeys extends KeysOf<DataT> = KeysOf<DataT>,
+    DefaultT = DataT,
+> (
+    request: Ref<ReqT> | ReqT | (() => ReqT),
+    opts?: Omit<UseHttpOptions<_ResT, DataT, PickKeys, DefaultT, ReqT, Method>, 'lazy'>
+): AsyncData<PickFrom<DataT, PickKeys> | DefaultT, ErrorT | null>
+export function useLazyHttp<
+    ResT = void,
+    ErrorT = FetchError,
+    ReqT extends NitroFetchRequest = NitroFetchRequest,
+    Method extends AvailableRouterMethod<ReqT> = ResT extends void ? 'get' extends AvailableRouterMethod<ReqT> ? 'get' : AvailableRouterMethod<ReqT> : AvailableRouterMethod<ReqT>,
+    _ResT = ResT extends void ? FetchResult<ReqT, Method> : ResT,
+    DataT = _ResT,
+    PickKeys extends KeysOf<DataT> = KeysOf<DataT>,
+    DefaultT = null,
 >(
     request: Ref<ReqT> | ReqT | (() => ReqT),
-    arg1?: string | Omit<UseHttpOptions<_ResT, Transform, PickKeys, Method>, 'lazy'>,
+    arg1?: string | Omit<UseHttpOptions<_ResT, DataT, PickKeys, DefaultT, ReqT, Method>, 'lazy'>,
     arg2?: string
 ) {
 
     const [opts, autoKey] = typeof arg1 === 'string' ? [{}, arg1] : [arg1, arg2]
 
-    return useHttp<ResT, ErrorT, ReqT, _ResT, Transform, PickKeys>(request, {
+    return useHttp<ResT, ErrorT, ReqT, Method, _ResT, DataT, PickKeys, DefaultT>(request, {
         ...opts,
         lazy: true
-        // @ts-ignore
+        // @ts-expect-error we pass an extra argument with the resolved auto-key to prevent another from being injected
     }, autoKey)
 }

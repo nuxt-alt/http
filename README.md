@@ -84,10 +84,3 @@ $http.onError(err)
 ## Options
 
 Config options are taken from the [http module](https://http.nuxtjs.org/). In addition an additional properyul has been added.
-
-### `interceptoPlugin`
-
-- Type: `Boolean`
-- Default: `false`
-
-Enable/disable to use an interceptor plugin to handle urls like the proxy module. This requires the `@nuxt-alt/proxy` module to be installed as it uses it's config for url rewriting.

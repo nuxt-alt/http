@@ -1,5 +1,5 @@
 import type { ModuleOptions } from './types'
-import { addTemplate, addServerPlugin, defineNuxtModule, addPluginTemplate, createResolver, addImports } from '@nuxt/kit'
+import { addTemplate, defineNuxtModule, addPlugin, createResolver, addImports } from '@nuxt/kit'
 import { name, version } from '../package.json'
 import { withHttps } from 'ufo'
 import { defu } from 'defu'
@@ -13,7 +13,10 @@ export default defineNuxtModule({
         configKey: CONFIG_KEY,
     },
     defaults: {} as ModuleOptions,
-    setup(opts, nuxt) {
+    async setup(opts, nuxt) {
+        // resolver
+        const resolver = createResolver(import.meta.url)
+
         // Combine options with runtime config
         const moduleOptions: ModuleOptions = opts
 
@@ -54,8 +57,7 @@ export default defineNuxtModule({
                 accept: 'application/json, text/plain, */*'
             },
             credentials: 'omit',
-            debug: false,
-            interceptorPlugin: false
+            debug: false
         })
 
         if (typeof options.browserBaseURL === 'undefined') {
@@ -68,42 +70,30 @@ export default defineNuxtModule({
             options.browserBaseURL = withHttps(options.browserBaseURL)
         }
 
-        // resolver
-        const resolver = createResolver(import.meta.url)
+        const runtimeDir = await resolver.resolve('./runtime')
+        nuxt.options.build.transpile.push(runtimeDir)
 
-        // Requires proxy module
-        if (Object.hasOwn(nuxt.options, 'proxy') && moduleOptions.interceptorPlugin) {
-            addPluginTemplate({
-                src: resolver.resolve('runtime/templates/interceptor.plugin.mjs'),
-                filename: 'http-interceptor.plugin.mjs',
-                mode: 'client',
-                // @ts-ignore
-                options: nuxt.options.proxy,
-            })
-        }
+        // Inject options via virtual template
+        nuxt.options.alias['#nuxt-http-options'] = addTemplate({
+            filename: 'nuxt-http-options.mjs',
+            write: true,
+            getContents: () => `export const options = ${JSON.stringify(options, null, 2)}`
+        }).dst
 
-        if (process.platform !== "win32") {
-            // create nitro plugin
-            addTemplate({
-                getContents: () => nitroHttp(options as ModuleOptions),
-                filename: `nitro-http.mjs`,
-                write: true
-            })
+        nuxt.hook('nitro:config', (config) => {
+            config.externals = config.externals || {}
+            config.externals.inline = config.externals.inline || []
+            config.externals.inline.push(runtimeDir)
 
-            addServerPlugin(resolver.resolve(nuxt.options.buildDir, 'nitro-http.mjs'))
-        }
-
-        // Register plugin
-        addPluginTemplate({
-            src: resolver.resolve('runtime/templates/http.plugin.mjs'),
-            filename: 'http.plugin.mjs',
-            options: options
+            config.virtual = config.virtual || {}
+            config.virtual['#nuxt-http-options'] = `export const options = ${JSON.stringify(options, null, 2)}`
+            config.plugins = config.plugins || []
+            config.plugins.push(resolver.resolve(runtimeDir, 'http-plugin.nitro'))
         })
 
-        addTemplate({
-            getContents: () => httpDefinition(),
-            filename: 'http.plugin.d.ts',
-            write: true,
+        // Register plugin
+        addPlugin({
+            src: resolver.resolve(resolver.resolve(runtimeDir, 'http-plugin.nuxt'))
         })
 
         // Add auto imports
@@ -115,46 +105,3 @@ export default defineNuxtModule({
         ])
     }
 })
-
-function nitroHttp(options: ModuleOptions) {
-return `import { createInstance } from '@refactorjs/ofetch'
-import { createFetch, Headers } from 'ofetch';
-import { eventHandler, fetchWithEvent } from 'h3';
-
-const config = ${JSON.stringify(options)}
-
-export default function (nitroApp) {
-    // baseURL
-    const baseURL = config.baseURL
-
-    // Defaults
-    const defaults = {
-        baseURL,
-        retry: config.retry,
-        timeout: config.serverTimeout,
-        credentials: config.credentials,
-        headers: {},
-    }
-
-    // @ts-ignore
-    globalThis.$http = createInstance(defaults, createFetch({ fetch: nitroApp.localFetch, Headers }))
-
-    nitroApp.h3App.use(eventHandler((event) => {
-        // Assign bound http to context
-        event.$http = (req, init) => fetchWithEvent(event, req, init, { fetch: $http });
-    }))
-}
-`
-}
-
-function httpDefinition() {
-return `import type { Plugin } from '#app'
-import { FetchInstance } from '@refactorjs/ofetch'
-
-declare const _default: Plugin<{
-    http: FetchInstance;
-}>;
-
-export default _default;
-`
-}
