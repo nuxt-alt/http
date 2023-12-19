@@ -1,9 +1,9 @@
-import { createInstance } from '@refactorjs/ofetch';
+import { createInstance, type FetchConfig } from '@refactorjs/ofetch';
 import { defineNuxtPlugin, useRuntimeConfig } from '#imports';
 import { options } from '#nuxt-http-options';
 import { defu } from "defu";
 
-const httpInstance = (opts) => {
+const httpInstance = (opts: FetchConfig) => {
     // Create new Fetch instance
     const instance = createInstance(opts)
 
@@ -54,7 +54,7 @@ export default defineNuxtPlugin(ctx => {
 
     if (config.proxyHeaders) {
         // Proxy SSR request headers
-        if (process.server && ctx.ssrContext?.event?.node?.req?.headers) {
+        if (process.server && ctx.ssrContext?.event.node.req.headers) {
             const reqHeaders = { ...ctx.ssrContext.event.node.req.headers }
             for (const h of config.proxyHeadersIgnore) {
                 delete reqHeaders[h]

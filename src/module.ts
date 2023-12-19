@@ -14,9 +14,6 @@ export default defineNuxtModule({
     },
     defaults: {} as ModuleOptions,
     async setup(opts, nuxt) {
-        // resolver
-        const resolver = createResolver(import.meta.url)
-
         // Combine options with runtime config
         const moduleOptions: ModuleOptions = opts
 
@@ -35,6 +32,7 @@ export default defineNuxtModule({
             browserBaseURL: undefined,
             proxyHeaders: true,
             proxyHeadersIgnore: [
+                'authorization',
                 'accept',
                 'connection',
                 'cf-connecting-ip',
@@ -56,7 +54,7 @@ export default defineNuxtModule({
             headers: {
                 accept: 'application/json, text/plain, */*'
             },
-            credentials: 'omit',
+            credentials: 'same-origin',
             debug: false
         })
 
@@ -69,6 +67,9 @@ export default defineNuxtModule({
             options.baseURL = withHttps(options.baseURL as string)
             options.browserBaseURL = withHttps(options.browserBaseURL)
         }
+
+        // resolver
+        const resolver = createResolver(import.meta.url)
 
         const runtimeDir = await resolver.resolve('./runtime')
         nuxt.options.build.transpile.push(runtimeDir)
@@ -93,7 +94,7 @@ export default defineNuxtModule({
 
         // Register plugin
         addPlugin({
-            src: resolver.resolve(resolver.resolve(runtimeDir, 'http-plugin.nuxt'))
+            src: resolver.resolve(resolver.resolve(runtimeDir, 'http-plugin.nuxt')),
         })
 
         // Add auto imports
