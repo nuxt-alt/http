@@ -2,8 +2,8 @@ import type { FetchConfig } from '@refactorjs/ofetch'
 import type { FetchError } from 'ofetch'
 import type { TypedInternalResponse, NitroFetchRequest, AvailableRouterMethod as _AvailableRouterMethod } from 'nitropack'
 import type { AsyncDataOptions, AsyncData } from '#app'
-import { computed, unref, reactive, type MaybeRef, type WatchSource, type Ref } from 'vue'
-import { useAsyncData, useNuxtApp } from '#imports'
+import { computed, unref, reactive, toValue, type MaybeRef, type WatchSource, type Ref } from 'vue'
+import { useAsyncData, useRequestEvent } from '#imports'
 import { hash } from 'ohash'
 
 type PickFrom<T, K extends Array<string>> = T extends Array<any> ? T : T extends Record<string, any> ? keyof T extends K[number] ? T : K[number] extends never ? T : Pick<T, K[number]> : T;
@@ -33,7 +33,7 @@ export interface UseHttpOptions<
     M extends AvailableRouterMethod<R> = AvailableRouterMethod<R>
 > extends Omit<AsyncDataOptions<ResT, DataT, PickKeys, DefaultT>, 'watch'>, ComputedFetchOptions<R, M> {
     key?: string
-    $fetch?: typeof globalThis.$http
+    $http?: typeof globalThis.$http
     watch?: MultiWatchSources | false
 }
 
@@ -59,7 +59,7 @@ export function useHttp<
     DataT = _ResT,
     PickKeys extends KeysOf<DataT> = KeysOf<DataT>,
     DefaultT = DataT,
-> (
+>(
     request: Ref<ReqT> | ReqT | (() => ReqT),
     opts?: UseHttpOptions<_ResT, DataT, PickKeys, DefaultT, ReqT, Method>
 ): AsyncData<PickFrom<DataT, PickKeys> | DefaultT, ErrorT | null>
@@ -82,15 +82,15 @@ export function useHttp<
     const _request = computed(() => {
         let r = request
         if (typeof r === 'function') {
-          r = r()
+            r = r()
         }
         return unref(r)
     })
 
-    const _key = opts.key || hash([autoKey, unref(opts.method as MaybeRef<string | undefined> | undefined)?.toUpperCase() || 'GET', unref(opts.baseURL), typeof _request.value === 'string' ? _request.value : '', unref(opts.params || opts.query)])
+    const _key = opts.key || hash([autoKey, typeof _request.value === 'string' ? _request.value : '', ...generateOptionSegments(opts)])
 
     if (!_key || typeof _key !== 'string') {
-        throw new TypeError('[nuxt] [useFetch] key must be a string: ' + _key)
+        throw new TypeError('[nuxt] [useHttp] key must be a string: ' + _key)
     }
 
     if (!request) {
@@ -99,8 +99,8 @@ export function useHttp<
 
     const key = _key === autoKey ? '$h' + _key : _key
 
-    if (!opts.baseURL && typeof _request.value === 'string' && _request.value.startsWith('//')) {
-        throw new Error('[nuxt] [useFetch] the request URL must not start with "//".')
+    if (!opts.baseURL && typeof _request.value === 'string' && (_request.value[0] === '/' && _request.value[1] === '/')) {
+        throw new Error('[nuxt] [useHttp] the request URL must not start with "//".')
     }
 
     const {
@@ -129,10 +129,17 @@ export function useHttp<
         watch: watch === false ? [] : [_fetchOptions, _request, ...(watch || [])]
     }
 
-    const { $http } = useNuxtApp()
+    let _$http = opts.$http || globalThis.$http
+
+    if (import.meta.server && !opts.$http) {
+        const isLocalFetch = typeof _request.value === 'string' && _request.value[0] === '/' && (!toValue(opts.baseURL) || toValue(opts.baseURL)![0] === '/')
+        if (isLocalFetch) {
+            _$http = useRequestEvent()?.$http
+        }
+    }
 
     const asyncData = useAsyncData<_ResT, ErrorT, DataT, PickKeys, DefaultT>(key, () => {
-        return $http.request(_request.value, _fetchOptions as FetchConfig) as Promise<_ResT>
+        return _$http.request(_request.value, _fetchOptions as FetchConfig) as Promise<_ResT>
     }, _asyncDataOptions)
 
     return asyncData
@@ -147,10 +154,10 @@ export function useLazyHttp<
     DataT = _ResT,
     PickKeys extends KeysOf<DataT> = KeysOf<DataT>,
     DefaultT = null,
-> (
+>(
     request: Ref<ReqT> | ReqT | (() => ReqT),
     opts?: Omit<UseHttpOptions<_ResT, DataT, PickKeys, DefaultT, ReqT, Method>, 'lazy'>
-  ): AsyncData<PickFrom<DataT, PickKeys> | DefaultT, ErrorT | null>
+): AsyncData<PickFrom<DataT, PickKeys> | DefaultT, ErrorT | null>
 export function useLazyHttp<
     ResT = void,
     ErrorT = FetchError,
@@ -160,7 +167,7 @@ export function useLazyHttp<
     DataT = _ResT,
     PickKeys extends KeysOf<DataT> = KeysOf<DataT>,
     DefaultT = DataT,
-> (
+>(
     request: Ref<ReqT> | ReqT | (() => ReqT),
     opts?: Omit<UseHttpOptions<_ResT, DataT, PickKeys, DefaultT, ReqT, Method>, 'lazy'>
 ): AsyncData<PickFrom<DataT, PickKeys> | DefaultT, ErrorT | null>
@@ -186,4 +193,30 @@ export function useLazyHttp<
         lazy: true
         // @ts-expect-error we pass an extra argument with the resolved auto-key to prevent another from being injected
     }, autoKey)
+}
+
+function generateOptionSegments<_ResT, DataT, DefaultT>(opts: UseHttpOptions<_ResT, DataT, any, DefaultT, any, any>) {
+    const segments: Array<string | undefined | Record<string, string>> = [
+        toValue(opts.method as MaybeRef<string | undefined> | undefined)?.toUpperCase() || 'GET',
+        toValue(opts.baseURL),
+    ]
+    for (const _obj of [opts.params || opts.query]) {
+        const obj = toValue(_obj)
+        if (!obj) { continue }
+
+        const unwrapped: Record<string, string> = {}
+        for (const [key, value] of Object.entries(obj)) {
+            unwrapped[toValue(key)] = toValue(value)
+        }
+        segments.push(unwrapped)
+    }
+    return segments
+}
+
+export function useRequestHttp(): typeof global.$http {
+    if (import.meta.client) {
+        return globalThis.$http
+    }
+
+    return useRequestEvent()?.$http as typeof globalThis.$http || globalThis.$http
 }

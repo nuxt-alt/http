@@ -32,7 +32,6 @@ export default defineNuxtModule({
             browserBaseURL: undefined,
             proxyHeaders: true,
             proxyHeadersIgnore: [
-                'authorization',
                 'accept',
                 'connection',
                 'cf-connecting-ip',
@@ -71,7 +70,7 @@ export default defineNuxtModule({
         // resolver
         const resolver = createResolver(import.meta.url)
 
-        const runtimeDir = await resolver.resolve('./runtime')
+        const runtimeDir = resolver.resolve('./runtime')
         nuxt.options.build.transpile.push(runtimeDir)
 
         // Inject options via virtual template
@@ -102,7 +101,8 @@ export default defineNuxtModule({
 
         addImports([
             { from: composables, name: 'useHttp' },
-            { from: composables, name: 'useLazyHttp' }
+            { from: composables, name: 'useLazyHttp' },
+            { from: composables, name: 'useRequestHttp' }
         ])
     }
 })

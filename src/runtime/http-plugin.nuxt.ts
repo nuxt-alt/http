@@ -1,14 +1,16 @@
 import { createInstance, type FetchConfig } from '@refactorjs/ofetch';
 import { defineNuxtPlugin, useRuntimeConfig } from '#imports';
+// @ts-expect-error: virtual file
 import { options } from '#nuxt-http-options';
 import { defu } from "defu";
 
 const httpInstance = (opts: FetchConfig) => {
     // Create new Fetch instance
-    const instance = createInstance(opts)
+    let instance = createInstance(opts)
 
     if (options.debug) {
-        const log = (level, ...messages) => console[level]('[http]', ...messages)
+        type ConsoleKeys = 'log' | 'info' | 'warn' | 'error';
+        const log = (level: ConsoleKeys, ...messages: any) => console[level]('[http]', ...messages);
 
         // request
         instance.onRequest(config => {
@@ -38,7 +40,7 @@ export default defineNuxtPlugin(ctx => {
     const runtimeConfig = useRuntimeConfig()
 
     // Use runtime config to configure options, with module options as the fallback
-    const config = process.server ? defu({}, runtimeConfig.http, runtimeConfig.public.http, options) : defu({}, runtimeConfig.public.http, options)
+    const config = process.server ? defu({}, runtimeConfig.http, runtimeConfig.public.http, options) : defu({}, runtimeConfig.public.http, options) as any
 
     // baseURL
     const baseURL = process.client ? config.browserBaseURL : config.baseURL
@@ -54,7 +56,7 @@ export default defineNuxtPlugin(ctx => {
 
     if (config.proxyHeaders) {
         // Proxy SSR request headers
-        if (process.server && ctx.ssrContext?.event.node.req.headers) {
+        if (import.meta.server && ctx.ssrContext?.event.node.req.headers) {
             const reqHeaders = { ...ctx.ssrContext.event.node.req.headers }
             for (const h of config.proxyHeadersIgnore) {
                 delete reqHeaders[h]
@@ -72,7 +74,7 @@ export default defineNuxtPlugin(ctx => {
 
     return {
         provide: {
-            http: http
+            http: $http
         }
     }
 })

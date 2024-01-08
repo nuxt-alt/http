@@ -1,6 +1,6 @@
 {
     "name": "@nuxt-alt/http",
-    "version": "1.7.3",
+    "version": "1.7.8",
     "description": "An extended module to ohmyfetch",
     "homepage": "https://github.com/nuxt-alt/http",
     "author": "Teranode",
@@ -37,7 +37,7 @@
     },
     "devDependencies": {
         "@types/node": "^18",
-        "nuxt": "^3.8.2",
+        "nuxt": "^3.9.1",
         "typescript": "^5.2.2",
         "unbuild": "^2.0.0"
     },
