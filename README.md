@@ -78,7 +78,6 @@ $http.onRequest(config)
 $http.onResponse(response)
 $http.onRequestError(err)
 $http.onResponseError(err)
-$http.onError(err)
 ```
 
 ## Options
