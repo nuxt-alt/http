@@ -30,7 +30,7 @@
     },
     "dependencies": {
         "@nuxt/kit": "^3.8.1",
-        "@nuxt/module-builder": "^0.5.4",
+        "@nuxt/module-builder": "^0.7.1",
         "@refactorjs/ofetch": "latest",
         "defu": "^6.1.3",
         "ufo": "^1.3.2"
